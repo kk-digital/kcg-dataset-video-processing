@@ -39,25 +39,31 @@ def crop_to_square(pil_img: Image.Image):
 class Dataset(torch.utils.data.Dataset):
 
     def __init__(self, file_paths: list, target_size: int):
-        
-        self.file_paths = file_paths
-        self.target_size = target_size
+        # Constructor for the Dataset object
+        self.file_paths = file_paths  # List of file paths for the images
+        self.target_size = target_size  # Target size to which images will be resized
     
     def __len__(self):
+        # Return the total number of items in the dataset
         return len(self.file_paths)
     
     def __getitem__(self, index: int):
-        
-        file_path = self.file_paths[index]
+        # Retrieve an item by its index
+        file_path = self.file_paths[index]  # Get the file path at the specified index
 
+        # Open the image, convert it to RGB to ensure it has three channels
         image = Image.open(file_path).convert('RGB')
 
+        # Calculate a scale factor for resizing that ensures no distortion occurs, but limits scaling to a factor of 0.5 at most
         scale = min((self.target_size / min(image.size)) ** 2, .5)
 
-        params = RandomResizedCrop.get_params(image, scale=(scale, 1), ratio=(1.,1.))
+        # Get the parameters for cropping and resizing using the scale factor and a fixed aspect ratio of 1:1
+        params = RandomResizedCrop.get_params(image, scale=(scale, 1), ratio=(1., 1.))
+        # Apply the cropping and resizing transformation to the image with bicubic interpolation and antialiasing
         image = VF.resized_crop(image, *params, size=self.target_size, interpolation=VF.InterpolationMode.BICUBIC, antialias=True)
 
+        # Convert the image to a NumPy array
         image = np.array(image)
         
+        # Return the processed image
         return image
-    
