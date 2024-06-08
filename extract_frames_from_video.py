@@ -33,6 +33,30 @@ def frame_generator(video_path, start=0., end=None, fps=1, width=1920, height=10
     process.wait()
 
 
+def key_frame_generator(video_path, start=0., end=None, width=1920, height=1080):
+
+    # .input(video_path, hwaccel='cuda', hwaccel_device='0', hwaccel_output_format='cuda')
+    if end is None:
+        stream = ffmpeg.input(video_path, ss=start, skip_frame='nokey')
+    else:
+        stream = ffmpeg.input(video_path, ss=start, to=end, skip_frame='nokey')
+        
+    process = (
+        stream
+        .filter('select', 'eq(pict_type,I)')
+        .output('pipe:', format='rawvideo', pix_fmt='rgb24', vsync='vfr')
+        .global_args('-loglevel', 'error')
+        .run_async(pipe_stdout=True)
+    )
+    while True:
+        in_bytes = process.stdout.read(width * height * 3)
+        if not in_bytes:
+            break
+        in_frame = np.frombuffer(in_bytes, np.uint8).reshape([height, width, 3])
+        yield in_frame
+    process.wait()
+
+
 def get_video_info(video_path):
     try:
         probe = ffmpeg.probe(video_path)
